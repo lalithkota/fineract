@@ -16,38 +16,17 @@
 # under the License.
 #
 
-
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: fineractmysql-pv-volume
-  labels:
-    type: local
-spec:
-  storageClassName: manual
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteMany
-  hostPath:
-    path: "/mnt/data"
-
----
-
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: fineractmysql-pv-claim
 spec:
-  storageClassName: manual
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:

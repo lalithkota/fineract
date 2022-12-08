@@ -16,20 +16,45 @@
 # under the License.
 #
 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mifos-self-service-constants
+data:
+  app.constants.js: |
+    (function(){
+      'use strict';
+
+      angular.module('selfService')
+
+      .constant("BASE_URL", "https://bank1-self-dev.openg2p.mosip.net/fineract-provider/api/v1")
+
+      .constant('AUTH_EVENTS', {
+        updateUser: 'update-user',
+        notAuthorized: 'auth-not-authorized',
+        notAuthenticated: 'auth-not-authenticated'
+      })
+
+      .constant("TENANT_IDENTIFIER", "tn03")
+
+      .constant('USER_ROLES', {
+        user: 'USER'
+      });
+    })();
+---
 
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: mifos-community
-  name: mifos-community
+    app: mifos-self-service
+  name: mifos-self-service
 spec:
   ports:
   - protocol: TCP
-    port: 9090
-    targetPort: 80
+    port: 80
   selector:
-    app: mifos-community
+    app: mifos-self-service
     tier: frontend
   type: ClusterIP
 
@@ -38,20 +63,20 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mifos-community
+  name: mifos-self-service
   labels:
-    app: mifos-community
+    app: mifos-self-service
 spec:
   selector:
     matchLabels:
-      app: mifos-community
+      app: mifos-self-service
       tier: frontend
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: mifos-community
+        app: mifos-self-service
         tier: frontend
     spec:
       initContainers:
@@ -59,27 +84,28 @@ spec:
           image: busybox:1.28
           command: ['sh', '-c', 'echo -e "Checking for the availability of Fineract server deployment"; while ! nc -z "fineract-server" 8080; do sleep 1; printf "-"; done; echo -e " >> Fineract server has started";']
       containers:
-      - name: mifos-community
-        image: openmf/community-app:latest
-        resources:
-          limits:
-            cpu: "1000m"
-            memory: "1Gi"
-          requests:
-            cpu: "200m"
-            memory: "0.5Gi"
+      - name: self-service
+        image: lalithkota/fineract-self-service:develop
         livenessProbe:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 90
+          initialDelaySeconds: 20
           periodSeconds: 1
         readinessProbe:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 90
+          initialDelaySeconds: 20
           periodSeconds: 1
         ports:
         - containerPort: 80
-          name: mifos-community
+          name: http
+        volumeMounts:
+        - name: mifos-self-service-constants
+          mountPath: "/usr/share/nginx/html/app.constants.js"
+          subPath: "app.constants.js"
+      volumes:
+        - name: mifos-self-service-constants
+          configMap:
+            name: mifos-self-service-constants
